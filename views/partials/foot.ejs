@@ -1,0 +1,22 @@
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/public/js/api.js"></script>
+  <script src="/public/js/toast.js"></script>
+  <script>
+    (function() {
+      try {
+        var params = new URLSearchParams(window.location.search || '');
+        if (params.get('needLogin') === '1') {
+          toast.error('Bạn cần đăng nhập để tiếp tục');
+          params.delete('needLogin');
+          var newSearch = params.toString();
+          var newUrl = window.location.pathname + (newSearch ? ('?' + newSearch) : '') + window.location.hash;
+          window.history.replaceState({}, '', newUrl);
+        }
+      } catch (e) {}
+    })();
+  </script>
+</body>
+</html>
+
+

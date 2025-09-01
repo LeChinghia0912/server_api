@@ -1,0 +1,99 @@
+<%- include('../partials/head', { title: 'Register', bodyClass: 'auth-body-dark' }) %>
+  <div class="auth-background">
+    <div class="shape auth-shape-1"></div>
+    <div class="shape auth-shape-2"></div>
+  </div>
+  <form id="register-form" class="auth-form">
+    <h3>Đăng ký</h3>
+    <div>
+      <label class="auth-label">Họ tên</label>
+      <input type="text" name="name" class="auth-input" required />
+    </div>
+    <div>
+      <label class="auth-label">Email</label>
+      <input type="email" name="email" class="auth-input" required />
+    </div>
+    <div>
+      <label class="auth-label">Điện thoại</label>
+      <input type="tel" name="phone" class="auth-input" placeholder="Ví dụ: 0901234567" />
+    </div>
+    <div>
+      <label class="auth-label">Ngày sinh</label>
+      <input type="date" name="date_of_birth" class="auth-input" />
+    </div>
+    <div>
+      <label class="auth-label">Giới tính</label>
+      <select name="gender" class="auth-select">
+        <option value="">-- Chọn --</option>
+        <option value="male">Nam</option>
+        <option value="female">Nữ</option>
+        <option value="other">Khác</option>
+      </select>
+    </div>
+    <div>
+      <label class="auth-label">Tỉnh/TP</label>
+      <input type="text" name="province" class="auth-input" />
+    </div>
+    <div>
+      <label class="auth-label">Quận/Huyện</label>
+      <input type="text" name="district" class="auth-input" />
+    </div>
+    <div>
+      <label class="auth-label">Phường/Xã</label>
+      <input type="text" name="ward" class="auth-input" />
+    </div>
+    <div>
+      <label class="auth-label">Địa chỉ</label>
+      <input type="text" name="address" class="auth-input" />
+    </div>
+    <div>
+      <label class="auth-label">Mật khẩu</label>
+      <input type="password" name="password" class="auth-input" required />
+    </div>
+    <div>
+      <label class="auth-label">Vai trò</label>
+      <select name="role" class="auth-select">
+        <option value="customer">Customer</option>
+        <option value="admin">Admin</option>
+      </select>
+    </div>
+    <button type="submit" class="auth-button">Đăng ký</button>
+  </form>
+  <pre id="register-result"></pre>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      var form = document.getElementById('register-form');
+      if (!form) return;
+      form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var payload = {
+          name: form.name.value,
+          email: form.email.value,
+          phone: form.phone.value,
+          date_of_birth: form.date_of_birth.value,
+          gender: form.gender.value,
+          province: form.province.value,
+          district: form.district.value,
+          ward: form.ward.value,
+          address: form.address.value,
+          password: form.password.value,
+          role: form.role.value
+        };
+        try {
+          var res = await api.post('/auth/register', payload);
+          document.getElementById('register-result').textContent = JSON.stringify(res, null, 2);
+          if (res && res.data && res.data.token) {
+            localStorage.setItem('token', res.data.token);
+            toast.success('Đăng ký thành công');
+            window.location.href = '/';
+          }
+        } catch (err) {
+          document.getElementById('register-result').textContent = err.message || 'Register failed';
+          toast.error(err.message || 'Đăng ký thất bại');
+        }
+      });
+    });
+  </script>
+<%- include('../partials/foot') %>
+
+

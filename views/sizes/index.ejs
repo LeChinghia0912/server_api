@@ -1,0 +1,70 @@
+<%- include('../partials/head', { title: 'Sizes' }) %>
+<h2>Quản lý Size</h2>
+<section class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span>Danh sách Size</span>
+    <div class="input-group" style="width: 320px;">
+      <input id="size-name" class="form-control" placeholder="Tên size" />
+      <button id="btn-create-size" class="btn btn-success" type="button">Thêm</button>
+    </div>
+  </div>
+  <div class="card-body">
+    <div id="sizes-container">
+      <% if (Array.isArray(sizes) && sizes.length) { %>
+        <% sizes.forEach(function(s){ %>
+          <div class="d-flex justify-content-between align-items-center border rounded px-2 py-1 mb-1">
+            <span><%= s.name %></span>
+            <button class="btn btn-sm btn-outline-danger btn-del" data-id="<%= s.id %>">Xóa</button>
+          </div>
+        <% }) %>
+      <% } else { %>
+        <div class="text-muted">Chưa có size</div>
+      <% } %>
+    </div>
+  </div>
+</section>
+<script>
+  async function loadSizes() {
+    try {
+      const res = await api.get('/sizes');
+      const rows = res.data || [];
+      const wrap = document.getElementById('sizes-container');
+      wrap.innerHTML = rows.map(function(s){
+        return '<div class="d-flex justify-content-between align-items-center border rounded px-2 py-1 mb-1">\
+                  <span>' + s.name + '</span>\
+                  <button class="btn btn-sm btn-outline-danger btn-del" data-id="' + s.id + '">Xóa</button>\
+                </div>';
+      }).join('') || '<div class="text-muted">Chưa có size</div>';
+    } catch (e) {
+      toast.error(e.message || 'Tải size thất bại');
+    }
+  }
+  document.getElementById('btn-create-size').addEventListener('click', async function(){
+    const name = (document.getElementById('size-name').value || '').trim();
+    if (!name) return;
+    try {
+      await api.post('/sizes', { name: name });
+      document.getElementById('size-name').value = '';
+      await loadSizes();
+      toast.success('Thêm size thành công');
+    } catch (e) { toast.error(e.message || 'Thêm size thất bại'); }
+  });
+  document.getElementById('sizes-container').addEventListener('click', async function(e){
+    const btn = e.target.closest('.btn-del');
+    if (!btn) return;
+    const id = btn.getAttribute('data-id');
+    if (!id) return;
+    if (!confirm('Xóa size #' + id + ' ?')) return;
+    try {
+      await api.del('/sizes/' + id);
+      await loadSizes();
+      toast.success('Xóa size thành công');
+    } catch (e) { toast.error(e.message || 'Xóa size thất bại'); }
+  });
+  window.addEventListener('load', function(){
+    try { loadSizes(); } catch (e) { try { toast && toast.error(e.message || 'Tải size thất bại'); } catch (_) {} }
+  });
+</script>
+<%- include('../partials/foot') %>
+
+

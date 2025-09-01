@@ -1,0 +1,199 @@
+<%- include('../partials/head', { title: 'Categories' }) %>
+<h2>Categories</h2>
+<section>
+  <form id="create-category">
+    <div class="form-group">
+      <label class="form-label">Name</label>
+      <input type="text" class="form-control" name="name" aria-describedby="emailHelp" placeholder="Name Category">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Description</label>
+      <textarea class="form-control" name="description" placeholder="Description"></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">Create</button>
+  </form>
+</section>
+<section>
+  <h3>List</h3>
+  <div class="table-responsive">
+  <table class="table table-bordered table-striped align-middle">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Description</th>
+        <th style="width: 160px;">Actions</th>
+      </tr>
+    </thead>
+    <tbody id="category-tbody">
+      <% (typeof categories !== 'undefined' && Array.isArray(categories) ? categories : []).forEach(function (c) { %>
+        <tr>
+          <td><%= c.id %></td>
+          <td><%= c.name %></td>
+          <td><%= c.description || '' %></td>
+          <td>
+            <button type="button" class="btn btn-sm btn-primary btn-edit" data-id="<%= c.id %>" data-name="<%= c.name %>" data-description="<%= c.description || '' %>">Edit</button>
+            <button type="button" class="btn btn-sm btn-danger btn-delete" data-id="<%= c.id %>">Delete</button>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+  </div>
+</section>
+<!-- Edit Modal -->
+<div class="modal fade" id="editCategoryModal" tabindex="-1" aria-labelledby="editCategoryModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editCategoryModalLabel">Edit Category</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label">Name</label>
+          <input type="text" class="form-control" id="edit-name" required />
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Description</label>
+          <input type="text" class="form-control" id="edit-description" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="save-edit-btn">Save</button>
+      </div>
+    </div>
+  </div>
+  </div>
+<script>
+  var editingId = null;
+  var editModalInstance = null;
+
+  function ensureEditModal() {
+    if (!editModalInstance) {
+      editModalInstance = new bootstrap.Modal(document.getElementById('editCategoryModal'));
+    }
+    return editModalInstance;
+  }
+
+  function createRow(c) {
+    const tr = document.createElement('tr');
+    const tdId = document.createElement('td');
+    const tdName = document.createElement('td');
+    const tdDesc = document.createElement('td');
+    const tdActions = document.createElement('td');
+    tdActions.style.width = '160px';
+
+    tdId.textContent = c.id;
+    tdName.textContent = c.name;
+    tdDesc.textContent = c.description || '';
+
+    const editBtn = document.createElement('button');
+    editBtn.type = 'button';
+    editBtn.className = 'btn btn-sm btn-primary btn-edit';
+    editBtn.textContent = 'Edit';
+    editBtn.dataset.id = c.id;
+    editBtn.dataset.name = c.name || '';
+    editBtn.dataset.description = c.description || '';
+
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'btn btn-sm btn-danger btn-delete ms-2';
+    delBtn.textContent = 'Delete';
+    delBtn.dataset.id = c.id;
+
+    tdActions.appendChild(editBtn);
+    tdActions.appendChild(delBtn);
+
+    tr.appendChild(tdId);
+    tr.appendChild(tdName);
+    tr.appendChild(tdDesc);
+    tr.appendChild(tdActions);
+    return tr;
+  }
+
+  async function loadCategories() {
+    try {
+      const res = await api.get("/categories");
+      const tbody = document.getElementById("category-tbody");
+      tbody.innerHTML = "";
+      (res.data || []).forEach(function (c) {
+        tbody.appendChild(createRow(c));
+      });
+    } catch (e) {
+      console.error(e);
+      toast.error(e.message || "Tải danh mục thất bại");
+    }
+  }
+
+  document
+    .getElementById("create-category")
+    .addEventListener("submit", async function (e) {
+      e.preventDefault();
+      const form = e.target;
+      const payload = {
+        name: form.name.value,
+        description: form.description.value,
+      };
+      try {
+        await api.post("/categories", payload);
+        form.reset();
+        toast.success("Tạo danh mục thành công");
+        await loadCategories();
+      } catch (e) {
+        toast.error(e.message || "Tạo danh mục thất bại");
+      }
+    });
+
+  // Delegated actions for Edit/Delete
+  document.getElementById('category-tbody').addEventListener('click', async function (e) {
+    const editButton = e.target.closest('.btn-edit');
+    const deleteButton = e.target.closest('.btn-delete');
+
+    if (editButton) {
+      editingId = editButton.dataset.id;
+      document.getElementById('edit-name').value = editButton.dataset.name || '';
+      document.getElementById('edit-description').value = editButton.dataset.description || '';
+      ensureEditModal().show();
+      return;
+    }
+
+    if (deleteButton) {
+      const id = deleteButton.dataset.id;
+      if (confirm('Bạn có chắc muốn xóa danh mục #' + id + ' ?')) {
+        try {
+          await api.del('/categories/' + id);
+          toast.success('Xóa danh mục thành công');
+          await loadCategories();
+        } catch (err) {
+          toast.error(err.message || 'Xóa danh mục thất bại');
+        }
+      }
+    }
+  });
+
+  document.getElementById('save-edit-btn').addEventListener('click', async function () {
+    if (!editingId) return;
+    const name = document.getElementById('edit-name').value.trim();
+    const description = document.getElementById('edit-description').value.trim();
+    if (!name) {
+      toast.error('Tên danh mục là bắt buộc');
+      return;
+    }
+    try {
+      await api.put('/categories/' + editingId, { name: name, description: description });
+      toast.success('Cập nhật danh mục thành công');
+      ensureEditModal().hide();
+      editingId = null;
+      await loadCategories();
+    } catch (err) {
+      toast.error(err.message || 'Cập nhật danh mục thất bại');
+    }
+  });
+
+  window.addEventListener('load', function(){
+    try { loadCategories(); } catch (e) { try { toast && toast.error(e.message || 'Tải danh mục thất bại'); } catch (_) {} }
+  });
+</script>
+<%- include('../partials/foot') %>
