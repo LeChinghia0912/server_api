@@ -1,0 +1,70 @@
+<%- include('../partials/head', { title: 'Colors' }) %>
+<h2>Quản lý Màu sắc</h2>
+<section class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span>Danh sách Màu sắc</span>
+    <div class="input-group" style="width: 320px;">
+      <input id="color-name" class="form-control" placeholder="Tên màu" />
+      <button id="btn-create-color" class="btn btn-success" type="button">Thêm</button>
+    </div>
+  </div>
+  <div class="card-body">
+    <div id="colors-container">
+      <% if (Array.isArray(colors) && colors.length) { %>
+        <% colors.forEach(function(c){ %>
+          <div class="d-flex justify-content-between align-items-center border rounded px-2 py-1 mb-1">
+            <span><%= c.name %></span>
+            <button class="btn btn-sm btn-outline-danger btn-del" data-id="<%= c.id %>">Xóa</button>
+          </div>
+        <% }) %>
+      <% } else { %>
+        <div class="text-muted">Chưa có màu</div>
+      <% } %>
+    </div>
+  </div>
+</section>
+<script>
+  async function loadColors() {
+    try {
+      const res = await api.get('/colors');
+      const rows = res.data || [];
+      const wrap = document.getElementById('colors-container');
+      wrap.innerHTML = rows.map(function(c){
+        return '<div class="d-flex justify-content-between align-items-center border rounded px-2 py-1 mb-1">\
+                  <span>' + c.name + '</span>\
+                  <button class="btn btn-sm btn-outline-danger btn-del" data-id="' + c.id + '">Xóa</button>\
+                </div>';
+      }).join('') || '<div class="text-muted">Chưa có màu</div>';
+    } catch (e) {
+      toast.error(e.message || 'Tải màu thất bại');
+    }
+  }
+  document.getElementById('btn-create-color').addEventListener('click', async function(){
+    const name = (document.getElementById('color-name').value || '').trim();
+    if (!name) return;
+    try {
+      await api.post('/colors', { name: name });
+      document.getElementById('color-name').value = '';
+      await loadColors();
+      toast.success('Thêm màu thành công');
+    } catch (e) { toast.error(e.message || 'Thêm màu thất bại'); }
+  });
+  document.getElementById('colors-container').addEventListener('click', async function(e){
+    const btn = e.target.closest('.btn-del');
+    if (!btn) return;
+    const id = btn.getAttribute('data-id');
+    if (!id) return;
+    if (!confirm('Xóa màu #' + id + ' ?')) return;
+    try {
+      await api.del('/colors/' + id);
+      await loadColors();
+      toast.success('Xóa màu thành công');
+    } catch (e) { toast.error(e.message || 'Xóa màu thất bại'); }
+  });
+  window.addEventListener('load', function(){
+    try { loadColors(); } catch (e) { try { toast && toast.error(e.message || 'Tải màu thất bại'); } catch (_) {} }
+  });
+</script>
+<%- include('../partials/foot') %>
+
+

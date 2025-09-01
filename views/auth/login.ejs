@@ -1,0 +1,53 @@
+<%- include('../partials/head', { title: 'Login', bodyClass: 'auth-body-dark' }) %>
+    <div class="auth-background">
+      <div class="shape auth-shape-1"></div>
+      <div class="shape auth-shape-2"></div>
+    </div>
+    <form id="login-form" class="auth-form">
+      <h3>Login Here</h3>
+
+      <label for="email" class="auth-label">Email</label>
+      <input type="email" placeholder="Email" id="email" name="email" class="auth-input" />
+
+      <label for="password" class="auth-label">Password</label>
+      <input
+        type="password"
+        placeholder="Password"
+        id="password"
+        name="password"
+        class="auth-input"
+      />
+
+      <button type="submit" class="auth-button">Log In</button>
+      <div class="social">
+        <div class="go"><i class="fab fa-google"></i> Google</div>
+        <div class="fb"><i class="fab fa-facebook"></i> Facebook</div>
+      </div>
+    </form>
+    <pre id="login-result"></pre>
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        var form = document.getElementById('login-form');
+        if (!form) return;
+        form.addEventListener('submit', async function (e) {
+          e.preventDefault();
+          var payload = {
+            email: form.email.value,
+            password: form.password.value
+          };
+          try {
+            var res = await api.post('/auth/login', payload);
+            document.getElementById('login-result').textContent = JSON.stringify(res, null, 2);
+            if (res && res.data && res.data.token) {
+              localStorage.setItem('token', res.data.token);
+              toast.success('Đăng nhập thành công');
+              window.location.href = '/';
+            }
+          } catch (err) {
+            document.getElementById('login-result').textContent = err.message || 'Login failed';
+            toast.error(err.message || 'Đăng nhập thất bại');
+          }
+        });
+      });
+    </script>
+<%- include('../partials/foot') %>

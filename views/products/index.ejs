@@ -1,0 +1,724 @@
+<%- include('../partials/head', { title: 'Products' }) %>
+<h2>Products</h2>
+<section>
+  <div class="card mb-3">
+    <div class="card-header">Create Product</div>
+    <div class="card-body">
+      <form id="create-product" enctype="multipart/form-data">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">Name</label>
+            <input class="form-control" name="name" placeholder="Name" required />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Description</label>
+            <input class="form-control" name="description" placeholder="Description" />
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Price</label>
+            <input class="form-control" name="price" placeholder="0.00" type="number" step="0.01" required />
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Stock</label>
+            <input class="form-control" name="stock" placeholder="0" type="number" required />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Category</label>
+            <select class="form-select" name="category_id">
+              <option value="">-- Chọn danh mục --</option>
+              <% (typeof categories !== 'undefined' && Array.isArray(categories) ?
+              categories : []).forEach(function (c) { %>
+              <option value="<%= c.id %>"><%= c.name %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mt-2">
+              <label class="form-label m-0">Biến thể</label>
+              <div>
+                <button class="btn btn-sm btn-outline-primary" type="button" id="btn-add-variant-row">Thêm biến thể</button>
+              </div>
+            </div>
+            <div id="variant-rows" class="mt-2"></div>
+            <div class="form-text">Chọn size và màu sắc cho từng biến thể.</div>
+          </div>
+        </div>
+        <div class="row g-3 mt-1 align-items-end">
+          <div class="col-md-5">
+            <label class="form-label">Image</label>
+            <input id="create-image" class="form-control" name="image" type="file" accept="image/*" />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label d-block">Preview</label>
+            <img id="create-image-preview" src="" alt="preview" style="height: 60px; display: none" />
+          </div>
+          <div class="col-md-4 text-end">
+            <button class="btn btn-primary" type="submit">Create</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+<section>
+  <h3>List</h3>
+  <div class="table-responsive">
+    <table class="table table-bordered table-striped align-middle">
+      <thead>
+        <tr>
+          <th style="width: 60px">ID</th>
+          <th style="width: 64px">Image</th>
+          <th>Name</th>
+          <th>Description</th>
+          <th style="width: 120px">Price</th>
+          <th style="width: 100px">Stock</th>
+          <th style="width: 120px">Category</th>
+          <th style="min-width: 220px">Variants</th>
+          <th style="width: 160px">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="product-tbody">
+        <% (typeof products !== 'undefined' && Array.isArray(products) ?
+        products : []).forEach(function(p) { %>
+        <tr>
+          <td><%= p.id %></td>
+          <td>
+            <% if (p.image_url) { %>
+            <img
+              src="<%= p.image_url %>"
+              alt="<%= p.name %>"
+              style="height: 40px"
+            />
+            <% } %>
+          </td>
+          <td><%= p.name %></td>
+          <td><%= p.description || '' %></td>
+          <td><%= p.price %></td>
+          <td><%= p.stock %></td>
+          <td>
+            <% var __cat = (typeof categories !== 'undefined' &&
+            Array.isArray(categories) ? categories : []).find(function(ci){
+            return Number(ci.id) === Number(p.category_id); }); %> <%= __cat ?
+            __cat.name : (p.category_id ?? '') %>
+          </td>
+          <td id="variants-<%= p.id %>">
+            <% if (Array.isArray(p.variants) && p.variants.length) { %>
+              <% 
+                var __sizes = [];
+                var __colors = [];
+                (p.variants || []).forEach(function(v){
+                  if (v.size_name && __sizes.indexOf(v.size_name) === -1) __sizes.push(v.size_name);
+                  if (v.color_name && __colors.indexOf(v.color_name) === -1) __colors.push(v.color_name);
+                });
+              %>
+              <div><small class="text-muted">Size:</small>
+                <% __sizes.forEach(function(s){ %>
+                  <span class="badge text-bg-secondary me-1"><%= s %></span>
+                <% }) %>
+                <% if (!__sizes.length) { %><span class="text-muted">-</span><% } %>
+              </div>
+              <div class="mt-1"><small class="text-muted">Màu:</small>
+                <% __colors.forEach(function(c){ %>
+                  <span class="badge text-bg-secondary me-1"><%= c %></span>
+                <% }) %>
+                <% if (!__colors.length) { %><span class="text-muted">-</span><% } %>
+              </div>
+              <% if (Array.isArray(p.variants) && p.variants.length) { %>
+                <div class="mt-1"><small class="text-muted">Tồn kho theo biến thể:</small>
+                  <% p.variants.forEach(function(v){ %>
+                    <span class="badge text-bg-light border me-1 mb-1">
+                      <%= (v.size_name || 'Size?') + ' / ' + (v.color_name || 'Màu?') + ' = ' + (v.stock ?? 0) %>
+                    </span>
+                  <% }) %>
+                </div>
+                <div class="mt-1"><small class="text-muted">Giá theo biến thể:</small>
+                  <% p.variants.forEach(function(v){ %>
+                    <span class="badge text-bg-light border me-1 mb-1">
+                      <%= (v.size_name || 'Size?') + ' / ' + (v.color_name || '?') + ' = ' + (v.price ?? 0) %>
+                    </span>
+                  <% }) %>
+                </div>
+              <% } %>
+            <% } else { %>
+              <span class="text-muted">Không có biến thể</span>
+            <% } %>
+          </td>
+          <td>
+            <button
+              type="button"
+              class="btn btn-sm btn-primary btn-edit"
+              data-id="<%= p.id %>"
+              data-name="<%= p.name %>"
+              data-description="<%= p.description || '' %>"
+              data-price="<%= p.price %>"
+              data-stock="<%= p.stock %>"
+              data-category_id="<%= p.category_id %>"
+              data-image_url="<%= p.image_url || '' %>"
+            >
+              Edit
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-danger btn-delete"
+              data-id="<%= p.id %>"
+            >
+              Delete
+            </button>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  
+</section>
+<!-- Edit Modal -->
+<div
+  class="modal fade"
+  id="editProductModal"
+  tabindex="-1"
+  aria-labelledby="editProductModalLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editProductModalLabel">Edit Product</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2">
+          <label class="form-label">Name</label
+          ><input class="form-control" id="edit-name" />
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Description</label
+          ><input class="form-control" id="edit-description" />
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Price</label
+          ><input
+            class="form-control"
+            id="edit-price"
+            type="number"
+            step="0.01"
+          />
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Stock</label
+          ><input class="form-control" id="edit-stock" type="number" />
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Category</label>
+          <select class="form-select" id="edit-category_id">
+            <option value="">-- Chọn danh mục --</option>
+            <% (typeof categories !== 'undefined' && Array.isArray(categories) ?
+            categories : []).forEach(function (c) { %>
+            <option value="<%= c.id %>"><%= c.name %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Image</label
+          ><input
+            class="form-control"
+            id="edit-image"
+            type="file"
+            accept="image/*"
+          />
+        </div>
+        <div class="mb-2">
+          <div class="d-flex justify-content-between align-items-center">
+            <label class="form-label m-0">Biến thể</label>
+            <div>
+              <button class="btn btn-sm btn-outline-primary" type="button" id="btn-add-variant-row-edit">Thêm biến thể</button>
+            </div>
+          </div>
+          <div id="variant-rows-edit" class="mt-2"></div>
+          <div class="form-text">Chỉnh sửa danh sách biến thể cho sản phẩm.</div>
+        </div>
+        <div class="mb-2">
+          <img
+            id="edit-image-preview"
+            src=""
+            alt="preview"
+            style="height: 60px; display: none"
+          />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Close
+        </button>
+        <button type="button" class="btn btn-primary" id="save-edit-btn">
+          Save
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<script type="application/json" id="categories-data">
+  <%- JSON.stringify((typeof categories !== 'undefined' && Array.isArray(categories) ? categories : [])) %>
+</script>
+<script type="application/json" id="sizes-data">
+  <%- JSON.stringify((typeof sizes !== 'undefined' && Array.isArray(sizes) ? sizes : [])) %>
+ </script>
+ <script type="application/json" id="colors-data">
+  <%- JSON.stringify((typeof colors !== 'undefined' && Array.isArray(colors) ? colors : [])) %>
+ </script>
+<script>
+  var editModal = null,
+    editingId = null;
+  var categoriesData = [];
+  var sizesData = [];
+  var colorsData = [];
+  try {
+    categoriesData = JSON.parse(
+      document.getElementById("categories-data").textContent || "[]"
+    );
+  } catch (_) {
+    categoriesData = [];
+  }
+  try {
+    sizesData = JSON.parse(
+      document.getElementById("sizes-data").textContent || "[]"
+    );
+  } catch (_) { sizesData = []; }
+  try {
+    colorsData = JSON.parse(
+      document.getElementById("colors-data").textContent || "[]"
+    );
+  } catch (_) { colorsData = []; }
+  var categoryIdToName = {};
+  (categoriesData || []).forEach(function (c) {
+    categoryIdToName[String(c.id)] = c.name;
+  });
+  function ensureEditModal() {
+    return (
+      editModal ||
+      (editModal = new bootstrap.Modal(
+        document.getElementById("editProductModal")
+      ))
+    );
+  }
+  function createVariantRow(prefix) {
+    var wrapper = document.createElement('div');
+    wrapper.className = 'row g-2 align-items-end mb-2' + (prefix === 'edit' ? ' variant-row-edit' : ' variant-row');
+    wrapper.innerHTML =
+      '<div class="col-md-3">\
+         <label class="form-label">Size</label>\
+         <select class="form-select" name="' + (prefix === 'edit' ? 'variant_edit_size_id' : 'variant_size_id') + '">\
+           <option value="">-- Size --</option>\
+           ' + sizesData.map(function(s){ return '<option value="' + s.id + '">' + s.name + '</option>'; }).join('') + '\
+         </select>\
+       </div>\
+       <div class="col-md-3">\
+         <label class="form-label">Color</label>\
+         <select class="form-select" name="' + (prefix === 'edit' ? 'variant_edit_color_id' : 'variant_color_id') + '">\
+           <option value="">-- Color --</option>\
+           ' + colorsData.map(function(c){ return '<option value="' + c.id + '">' + c.name + '</option>'; }).join('') + '\
+         </select>\
+       </div>\
+       <div class="col-md-2">\
+         <label class="form-label">Giá</label>\
+         <input class="form-control" type="number" step="0.01" min="0" name="' + (prefix === 'edit' ? 'variant_edit_price' : 'variant_price') + '" placeholder="0.00" />\
+       </div>\
+       <div class="col-md-2">\
+         <label class="form-label">Tồn kho</label>\
+         <input class="form-control" type="number" min="0" name="' + (prefix === 'edit' ? 'variant_edit_stock' : 'variant_stock') + '" placeholder="0" />\
+       </div>\
+       <div class="col-md-2 text-end">\
+         <button type="button" class="btn btn-outline-danger btn-sm btn-remove-variant">Xóa</button>\
+       </div>';
+    return wrapper;
+  }
+  function readVariantRows(containerId, prefix) {
+    var container = document.getElementById(containerId);
+    var rows = Array.prototype.slice.call(container.querySelectorAll('.row'));
+    return rows.map(function(row){
+      var sizeId = row.querySelector('select[name="' + (prefix === 'edit' ? 'variant_edit_size_id' : 'variant_size_id') + '"]').value;
+      var colorId = row.querySelector('select[name="' + (prefix === 'edit' ? 'variant_edit_color_id' : 'variant_color_id') + '"]').value;
+      var priceVal = row.querySelector('input[name="' + (prefix === 'edit' ? 'variant_edit_price' : 'variant_price') + '"]').value;
+      var stockVal = row.querySelector('input[name="' + (prefix === 'edit' ? 'variant_edit_stock' : 'variant_stock') + '"]').value;
+      return { size_id: Number(sizeId), color_id: Number(colorId), price: Number(priceVal || 0), stock: Number(stockVal || 0) };
+    }).filter(function(v){ return v.size_id && v.color_id; });
+  }
+  function createRow(p) {
+    const tr = document.createElement("tr");
+    var priceStr = p.price !== undefined && p.price !== null ? p.price : "";
+    var stockStr = p.stock !== undefined && p.stock !== null ? p.stock : "";
+    var catIdStr =
+      p.category_id !== undefined && p.category_id !== null
+        ? p.category_id
+        : "";
+    // Prepare variants cell HTML from p.variants if provided
+    var variantsCellHtml = '';
+    if (Array.isArray(p.variants)) {
+      var sizes = [];
+      var colors = [];
+      (p.variants || []).forEach(function(v){
+        if (v.size_name && sizes.indexOf(v.size_name) === -1) sizes.push(v.size_name);
+        if (v.color_name && colors.indexOf(v.color_name) === -1) colors.push(v.color_name);
+      });
+      var stockBadges = '';
+      var priceBadges = '';
+      (p.variants || []).forEach(function(v){
+        var pair = (v.size_name || 'Size?') + ' / ' + (v.color_name || 'Màu?');
+        stockBadges += '<span class="badge text-bg-light border me-1 mb-1">' + pair + ' = ' + (v.stock ?? 0) + '</span>';
+        priceBadges += '<span class="badge text-bg-light border me-1 mb-1">' + pair + ' = ' + (v.price ?? 0) + '</span>';
+      });
+      variantsCellHtml =
+        '<div><small class="text-muted">Size:</small> ' +
+        (sizes.map(function(s){ return '<span class="badge text-bg-secondary me-1">' + s + '</span>'; }).join('') || '<span class="text-muted">-</span>') +
+        '</div>' +
+        '<div class="mt-1"><small class="text-muted">Màu:</small> ' +
+        (colors.map(function(c){ return '<span class="badge text-bg-secondary me-1">' + c + '</span>'; }).join('') || '<span class="text-muted">-</span>') +
+        '</div>' +
+        '<div class="mt-1"><small class="text-muted">Tồn kho theo biến thể:</small> ' + (stockBadges || '<span class="text-muted">-</span>') + '</div>' +
+        '<div class="mt-1"><small class="text-muted">Giá theo biến thể:</small> ' + (priceBadges || '<span class="text-muted">-</span>') + '</div>';
+    } else {
+      variantsCellHtml = '<span class="text-muted">Không có biến thể</span>';
+    }
+    tr.innerHTML =
+      "<td>" +
+      p.id +
+      "</td>" +
+      "<td>" +
+      (p.image_url
+        ? '<img src="' + p.image_url + '" style="height:40px" />'
+        : "") +
+      "</td>" +
+      "<td>" +
+      (p.name || "") +
+      "</td>" +
+      "<td>" +
+      (p.description || "") +
+      "</td>" +
+      "<td>" +
+      priceStr +
+      "</td>" +
+      "<td>" +
+      stockStr +
+      "</td>" +
+      "<td>" +
+      (categoryIdToName[String(p.category_id)] || catIdStr) +
+      "</td>" +
+      "<td id=\"variants-" + p.id + "\">" + variantsCellHtml + "</td>" +
+      "<td>" +
+      '<button type="button" class="btn btn-sm btn-primary btn-edit" data-id="' +
+      p.id +
+      '" data-name="' +
+      (p.name || "") +
+      '" data-description="' +
+      (p.description || "") +
+      '" data-price="' +
+      priceStr +
+      '" data-stock="' +
+      stockStr +
+      '" data-category_id="' +
+      catIdStr +
+      '" data-image_url="' +
+      (p.image_url || '') +
+      '">Edit</button> ' +
+      '<button type="button" class="btn btn-sm btn-danger btn-delete" data-id="' +
+      p.id +
+      '">Delete</button>' +
+      "</td>";
+    return tr;
+  }
+  async function loadProductVariants(productId) {
+    try {
+      const cell = document.getElementById('variants-' + productId);
+      if (!cell) return;
+      const res = await api.get('/products/' + productId + '/variants');
+      const rows = res.data || [];
+      if (!rows.length) {
+        cell.innerHTML = '<span class="text-muted">Không có biến thể</span>';
+        return;
+      }
+      var sizes = [];
+      var colors = [];
+      rows.forEach(function(v){
+        if (v.size_name && sizes.indexOf(v.size_name) === -1) sizes.push(v.size_name);
+        if (v.color_name && colors.indexOf(v.color_name) === -1) colors.push(v.color_name);
+      });
+      cell.innerHTML =
+        '<div><small class="text-muted">Size:</small> ' +
+        (sizes.map(function(s){ return '<span class="badge text-bg-secondary me-1">' + s + '</span>'; }).join('') || '<span class="text-muted">-</span>') +
+        '</div>' +
+        '<div class="mt-1"><small class="text-muted">Màu:</small> ' +
+        (colors.map(function(c){ return '<span class="badge text-bg-secondary me-1">' + c + '</span>'; }).join('') || '<span class="text-muted">-</span>') +
+        '</div>';
+    } catch (e) {
+      try {
+        const cell = document.getElementById('variants-' + productId);
+        if (cell) cell.innerHTML = '<span class="text-danger">Lỗi tải</span>';
+      } catch (_) {}
+    }
+  }
+  async function loadProducts() {
+    try {
+      const res = await api.get("/products");
+      const tbody = document.getElementById("product-tbody");
+      tbody.innerHTML = "";
+      (res.data || []).forEach(function (p) {
+        const tr = createRow(p);
+        tbody.appendChild(tr);
+        // No need to fetch per product; SSR in cell handles empty/non-empty states
+      });
+    } catch (e) {
+      console.error(e);
+      toast.error(e.message || "Tải sản phẩm thất bại");
+    }
+  }
+
+  document
+    .getElementById("create-product")
+    .addEventListener("submit", async function (e) {
+      e.preventDefault();
+      const form = e.target;
+      const fd = new FormData(form);
+      var variants = readVariantRows('variant-rows');
+      if (variants.length) {
+        fd.append('variants', JSON.stringify(variants));
+      }
+      // Keep textarea value as string in FormData
+      try {
+        await api.postMultipart("/products", fd);
+        form.reset();
+        // reset preview
+        try {
+          if (window.__createPreviewUrl) {
+            URL.revokeObjectURL(window.__createPreviewUrl);
+            window.__createPreviewUrl = null;
+          }
+        } catch (_) {}
+        document.getElementById("create-image-preview").style.display = "none";
+        document.getElementById("create-image-preview").src = "";
+        toast.success("Tạo sản phẩm thành công");
+        await loadProducts();
+      } catch (e) {
+        toast.error(e.message || "Tạo sản phẩm thất bại");
+      }
+    });
+
+  // Image preview for create
+  document
+    .getElementById("create-image")
+    .addEventListener("change", function (e) {
+      const file = e.target.files && e.target.files[0];
+      const img = document.getElementById("create-image-preview");
+      if (!file) {
+        img.style.display = "none";
+        if (window.__createPreviewUrl) {
+          try {
+            URL.revokeObjectURL(window.__createPreviewUrl);
+          } catch (_) {}
+        }
+        window.__createPreviewUrl = null;
+        img.src = "";
+        return;
+      }
+      try {
+        if (window.__createPreviewUrl) {
+          URL.revokeObjectURL(window.__createPreviewUrl);
+        }
+      } catch (_) {}
+      const url = URL.createObjectURL(file);
+      window.__createPreviewUrl = url;
+      img.src = url;
+      img.style.display = "";
+    });
+
+  // Image preview for edit
+  document
+    .getElementById("edit-image")
+    .addEventListener("change", function (e) {
+      const file = e.target.files && e.target.files[0];
+      const img = document.getElementById("edit-image-preview");
+      if (!img) return;
+      if (!file) {
+        try { if (window.__editPreviewUrl) { URL.revokeObjectURL(window.__editPreviewUrl); } } catch (_) {}
+        window.__editPreviewUrl = null;
+        if (window.__editOriginalUrl) {
+          img.src = window.__editOriginalUrl;
+          img.style.display = "";
+        } else {
+          img.src = "";
+          img.style.display = "none";
+        }
+        return;
+      }
+      try { if (window.__editPreviewUrl) { URL.revokeObjectURL(window.__editPreviewUrl); } } catch (_) {}
+      const url = URL.createObjectURL(file);
+      window.__editPreviewUrl = url;
+      img.src = url;
+      img.style.display = "";
+    });
+
+  // Cleanup preview when modal hidden
+  document.getElementById("editProductModal").addEventListener("hidden.bs.modal", function () {
+    try { if (window.__editPreviewUrl) { URL.revokeObjectURL(window.__editPreviewUrl); } } catch (_) {}
+    window.__editPreviewUrl = null;
+    window.__editOriginalUrl = null;
+    var img = document.getElementById("edit-image-preview");
+    if (img) { img.src = ""; img.style.display = "none"; }
+    var input = document.getElementById("edit-image");
+    if (input) { input.value = ""; }
+  });
+
+  document
+    .getElementById("product-tbody")
+    .addEventListener("click", async function (e) {
+      const editBtn = e.target.closest(".btn-edit");
+      const delBtn = e.target.closest(".btn-delete");
+      if (editBtn) {
+        editingId = editBtn.dataset.id;
+        document.getElementById("edit-name").value = editBtn.dataset.name || "";
+        document.getElementById("edit-description").value =
+          editBtn.dataset.description || "";
+        document.getElementById("edit-price").value =
+          editBtn.dataset.price || "";
+        document.getElementById("edit-stock").value =
+          editBtn.dataset.stock || "";
+        document.getElementById("edit-category_id").value =
+          editBtn.dataset.category_id || "";
+        document.getElementById("edit-image").value = "";
+        // Initialize image preview for edit modal
+        try { if (window.__editPreviewUrl) { URL.revokeObjectURL(window.__editPreviewUrl); } } catch (_) {}
+        window.__editPreviewUrl = null;
+        window.__editOriginalUrl = editBtn.dataset.image_url || "";
+        (function(){
+          var img = document.getElementById("edit-image-preview");
+          if (!img) return;
+          if (window.__editOriginalUrl) {
+            img.src = window.__editOriginalUrl;
+            img.style.display = "";
+          } else {
+            img.src = "";
+            img.style.display = "none";
+          }
+        })();
+        ensureEditModal().show();
+        // Load variants for product to edit
+        try {
+          var container = document.getElementById('variant-rows-edit');
+          container.innerHTML = '';
+          var res = await api.get('/products/' + editingId + '/variants');
+          (res.data || []).forEach(function(v){
+            var row = createVariantRow('edit');
+            var selects = row.querySelectorAll('select');
+            selects[0].value = v.size_id;
+            selects[1].value = v.color_id;
+            var priceInput = row.querySelector('input[name="variant_edit_price"]');
+            if (priceInput) priceInput.value = v.price || 0;
+            var stockInput = row.querySelector('input[name="variant_edit_stock"]');
+            if (stockInput) stockInput.value = v.stock || 0;
+            container.appendChild(row);
+          });
+        } catch (_) { }
+        return;
+      }
+      if (delBtn) {
+        const id = delBtn.dataset.id;
+        if (confirm("Bạn có chắc muốn xóa sản phẩm #" + id + " ?")) {
+          try {
+            await api.del("/products/" + id);
+            toast.success("Xóa sản phẩm thành công");
+            await loadProducts();
+          } catch (err) {
+            toast.error(err.message || "Xóa sản phẩm thất bại");
+          }
+        }
+      }
+    });
+
+  document
+    .getElementById("save-edit-btn")
+    .addEventListener("click", async function () {
+      if (!editingId) return;
+      const fd = new FormData();
+      fd.append("name", document.getElementById("edit-name").value || "");
+      fd.append(
+        "description",
+        document.getElementById("edit-description").value || ""
+      );
+      fd.append("price", document.getElementById("edit-price").value || "");
+      fd.append("stock", document.getElementById("edit-stock").value || "");
+      fd.append(
+        "category_id",
+        document.getElementById("edit-category_id").value || ""
+      );
+      const file = document.getElementById("edit-image").files[0];
+      if (file) fd.append("image", file);
+      var variants = readVariantRows('variant-rows-edit', 'edit');
+      fd.append('variants', JSON.stringify(variants));
+      try {
+        await api.putMultipart("/products/" + editingId, fd);
+        toast.success("Cập nhật sản phẩm thành công");
+        ensureEditModal().hide();
+        editingId = null;
+        await loadProducts();
+      } catch (err) {
+        toast.error(err.message || "Cập nhật sản phẩm thất bại");
+      }
+    });
+
+  // Variant rows: Add/Remove buttons
+  document.getElementById('btn-add-variant-row').addEventListener('click', function(){
+    document.getElementById('variant-rows').appendChild(createVariantRow('create'));
+  });
+  document.getElementById('btn-add-variant-row-edit').addEventListener('click', function(){
+    document.getElementById('variant-rows-edit').appendChild(createVariantRow('edit'));
+  });
+  document.getElementById('variant-rows').addEventListener('click', function(e){
+    var btn = e.target.closest('.btn-remove-variant');
+    if (btn) {
+      var row = btn.closest('.row');
+      if (row) row.remove();
+    }
+  });
+  document.getElementById('variant-rows-edit').addEventListener('click', function(e){
+    var btn = e.target.closest('.btn-remove-variant');
+    if (btn) {
+      var row = btn.closest('.row');
+      if (row) row.remove();
+    }
+  });
+
+  window.addEventListener('load', function(){
+    try { loadProducts(); } catch (e) { try { toast && toast.error(e.message || 'Lỗi tải sản phẩm'); } catch (_) {} }
+  });
+  // Update selects options for variant rows when sizes/colors change (fetch fresh lists)
+  async function refreshSizes() {
+    try {
+      const res = await api.get('/sizes');
+      sizesData = res.data || [];
+      Array.prototype.forEach.call(document.querySelectorAll('select[name="variant_size_id"], select[name="variant_edit_size_id"]'), function(sel){
+        var val = sel.value;
+        sel.innerHTML = '<option value="">-- Size --</option>' + sizesData.map(function(s){ return '<option value="' + s.id + '">' + s.name + '</option>'; }).join('');
+        if (val) sel.value = val;
+      });
+    } catch (_) {}
+  }
+  async function refreshColors() {
+    try {
+      const res = await api.get('/colors');
+      colorsData = res.data || [];
+      Array.prototype.forEach.call(document.querySelectorAll('select[name="variant_color_id"], select[name="variant_edit_color_id"]'), function(sel){
+        var val = sel.value;
+        sel.innerHTML = '<option value="">-- Color --</option>' + colorsData.map(function(c){ return '<option value="' + c.id + '">' + c.name + '</option>'; }).join('');
+        if (val) sel.value = val;
+      });
+    } catch (_) {}
+  }
+  // Initial refresh
+  refreshSizes();
+  refreshColors();
+</script>
+<%- include('../partials/foot') %>

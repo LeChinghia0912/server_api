@@ -1,0 +1,36 @@
+{
+  "name": "node-express-clean-api",
+  "version": "1.0.0",
+  "description": "Clean architecture Node.js Express API boilerplate",
+  "main": "app.js",
+  "private": true,
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "start:dev": "nodemon app.js"
+  },
+  "keywords": [
+    "express",
+    "api",
+    "clean-architecture"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "body-parser": "^1.20.3",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "ejs": "^3.1.10",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.2",
+    "mysql2": "^3.11.0",
+    "redis": "^4.7.1",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.3"
+  }
+}
