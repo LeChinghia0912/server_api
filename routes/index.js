@@ -5,6 +5,7 @@ const categoriesRoutes = require("./categoriesRoutes");
 const productsRoutes = require("./productsRoutes");
 const sizesRoutes = require("./sizesRoutes");
 const colorsRoutes = require("./colorsRoutes");
+const cartRoutes = require("./cartRoutes");
 const router = express.Router();
 
 // Health check
@@ -19,5 +20,6 @@ router.use("/categories", categoriesRoutes);
 router.use("/products", productsRoutes);
 router.use("/sizes", sizesRoutes);
 router.use("/colors", colorsRoutes);
+router.use("/cart", cartRoutes);
 
 module.exports = router;
