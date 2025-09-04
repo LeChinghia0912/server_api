@@ -5,6 +5,7 @@ const categoriesService = require('../services/categoriesService');
 const productsService = require('../services/productsService');
 const sizesService = require('../services/sizesService');
 const colorsService = require('../services/colorsService');
+const ordersService = require('../services/ordersService');
 
 router.get('/', (req, res) => {
   res.render('home', { title: 'Home', mainFluid: true });
@@ -54,6 +55,17 @@ router.get('/colors', requireAuth, requireAdmin, async (req, res, next) => {
   try {
     const colors = await colorsService.listColors();
     res.render('colors/index', { title: 'Colors', colors, mainFluid: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Removed user orders page
+
+router.get('/orders/manage', requireAuth, requireAdmin, async (req, res, next) => {
+  try {
+    const rows = await ordersService.listAllOrdersWithUsers();
+    res.render('orders/manage', { title: 'Quản lý đơn', orders: rows, mainFluid: true });
   } catch (err) {
     next(err);
   }

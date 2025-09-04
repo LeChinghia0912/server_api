@@ -27,4 +27,10 @@ module.exports = {
   colors: {
     all: toNum(process.env.CACHE_TTL_COLORS, 2592000), // 30 ngày
   },
+  orders: {
+    adminAll: toNum(process.env.CACHE_TTL_ORDERS_ADMIN_ALL, 30),
+    adminById: toNum(process.env.CACHE_TTL_ORDERS_ADMIN_BY_ID, 60),
+    userAll: toNum(process.env.CACHE_TTL_ORDERS_USER_ALL, 15),
+    userById: toNum(process.env.CACHE_TTL_ORDERS_USER_BY_ID, 60),
+  },
 };

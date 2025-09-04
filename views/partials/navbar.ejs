@@ -5,6 +5,11 @@
     <li><a href="/app/categories">Danh mục</a></li>
     <li><a href="/app/colors">Màu sắc</a></li>
     <li><a href="/app/sizes">Size</a></li>
+    <li>
+      <a href="/app/orders/manage" id="nav-admin-orders" style="display: none"
+        >Quản trị đơn hàng</a
+      >
+    </li>
   </ul>
   <ul class="auth">
     <li><a href="/app/login" id="nav-login">Đăng nhập</a></li>
@@ -19,9 +24,21 @@
     var register = document.getElementById("nav-register");
     var logout = document.getElementById("nav-logout");
     if (token) {
+      function parseJwt(t) {
+        try {
+          return JSON.parse(atob(t.split(".")[1]));
+        } catch (_) {
+          return null;
+        }
+      }
+      var payload = parseJwt(token);
       if (login) login.style.display = "none";
       if (register) register.style.display = "none";
       if (logout) logout.style.display = "";
+      if (payload && String(payload.role) === "admin") {
+        var adminLink = document.getElementById("nav-admin-orders");
+        if (adminLink) adminLink.style.display = "";
+      }
       if (logout) {
         logout.addEventListener("click", function (e) {
           e.preventDefault();

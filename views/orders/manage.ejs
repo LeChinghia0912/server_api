@@ -1,0 +1,99 @@
+<%- include('../partials/head', { title: 'Quản lý đơn' }) %>
+<h2>Quản lý đơn hàng</h2>
+
+<div class="table-responsive">
+  <table class="table table-bordered table-striped align-middle">
+    <thead>
+      <tr>
+        <th style="width: 80px">ID</th>
+        <th style="min-width: 180px">Khách hàng</th>
+        <th style="width: 120px">Tổng tiền</th>
+        <th style="width: 120px">Tổng SL</th>
+        <th style="width: 140px">Trạng thái</th>
+        <th style="width: 200px">Tạo lúc</th>
+        <th style="width: 140px">Thao tác</th>
+      </tr>
+    </thead>
+    <tbody id="orders-admin-tbody">
+      <% (Array.isArray(orders) ? orders : []).forEach(function(o){ %>
+        <tr>
+          <td><%= o.id %></td>
+          <td>
+            <div><b><%= o.user_name || ('User #' + o.user_id) %></b></div>
+            <div class="text-muted"><%= o.user_email || '' %></div>
+          </td>
+          <td><%= o.total %></td>
+          <td><%= o.total_quantity || 0 %></td>
+          <td><span class="badge text-bg-secondary"><%= o.status %></span></td>
+          <td><%= o.created_at %></td>
+          <td>
+            <button type="button" class="btn btn-sm btn-outline-primary btn-view" data-id="<%= o.id %>">Xem</button>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+  <div id="orders-admin-empty" class="text-muted <%= (Array.isArray(orders) && orders.length) ? 'd-none' : '' %>">Chưa có đơn hàng nào</div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="orderAdminDetailModal" tabindex="-1" aria-labelledby="orderAdminDetailModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="orderAdminDetailModalLabel">Chi tiết đơn</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="order-admin-detail-body">
+          <div class="text-muted">Đang tải...</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  var adminDetailModal = null;
+  function ensureAdminDetailModal() { return adminDetailModal || (adminDetailModal = new bootstrap.Modal(document.getElementById('orderAdminDetailModal'))); }
+  document.getElementById('orders-admin-tbody').addEventListener('click', async function(e){
+    var btn = e.target.closest('.btn-view');
+    if (!btn) return;
+    var id = btn.dataset.id;
+    var body = document.getElementById('order-admin-detail-body');
+    body.innerHTML = '<div class="text-muted">Đang tải...</div>';
+    ensureAdminDetailModal().show();
+    try {
+      const res = await api.get('/admin/orders/' + id);
+      var o = res.data;
+      var items = Array.isArray(o.items) ? o.items : [];
+      var html = '';
+      html += '<div class="mb-2"><b>Đơn #' + o.id + '</b> - Tổng tiền: ' + (o.total ?? 0) + ' - Tổng SL: ' + (o.total_quantity ?? 0) + '</div>';
+      if (o.user) {
+        html += '<div class="mb-2"><small class="text-muted">Khách:</small> ' + (o.user.name || ('User #' + o.user.id)) + ' - ' + (o.user.phone || '') + '</div>';
+        html += '<div class="mb-2"><small class="text-muted">Địa chỉ:</small> ' +
+                [o.user.address, o.user.ward, o.user.district, o.user.province].filter(Boolean).join(', ') + '</div>';
+      }
+      html += '<div class="mb-2">Trạng thái: <span class="badge text-bg-secondary">' + o.status + '</span></div>';
+      html += '<div class="table-responsive"><table class="table table-bordered table-striped align-middle">';
+      html += '<thead><tr><th style="width:64px">Ảnh</th><th>Sản phẩm</th><th>Biến thể</th><th>SL</th><th>Giá</th></tr></thead><tbody>';
+      items.forEach(function(i){
+        var productStr = i.variant ? (i.variant.product_name || ('SP #' + i.variant.product_id)) : ('Variant #' + i.variant_id);
+        var variantStr = i.variant ? ('Size ' + (i.variant.size_name || i.variant.size_id) + ' - Màu ' + (i.variant.color_name || i.variant.color_id)) : '';
+        var img = i.variant && i.variant.product_image_url ? ('<img src="' + i.variant.product_image_url + '" alt="img" style="height:40px" />') : '';
+        html += '<tr><td>' + img + '</td><td>' + productStr + '</td><td>' + variantStr + '</td><td>' + i.quantity + '</td><td>' + i.price + '</td></tr>';
+      });
+      if (!items.length) { html += '<tr><td colspan="5" class="text-muted">Không có item</td></tr>'; }
+      html += '</tbody></table></div>';
+      body.innerHTML = html;
+    } catch (e) {
+      body.innerHTML = '<div class="text-danger">Không tải được chi tiết đơn</div>';
+    }
+  });
+</script>
+<%- include('../partials/foot') %>
+
+
