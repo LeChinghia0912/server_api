@@ -13,6 +13,12 @@ const CacheKeys = {
   colors: {
     all: 'colors:all',
   },
+  orders: {
+    adminAll: 'orders:admin:all',
+    adminById: (id) => `orders:admin:${id}`,
+    userAll: (userId) => `orders:user:${userId}:all`,
+    userById: (userId, id) => `orders:user:${userId}:${id}`,
+  },
 };
 
 module.exports = CacheKeys;

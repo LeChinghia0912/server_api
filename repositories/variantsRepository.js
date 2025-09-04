@@ -56,8 +56,9 @@ module.exports = {
         if (!Array.isArray(variantIds) || variantIds.length === 0) return [];
         const placeholders = variantIds.map(() => '?').join(',');
         const [rows] = await pool.query(
-            `SELECT v.id, v.product_id, v.size_id, s.name AS size_name, v.color_id, c.name AS color_name, v.stock, v.price
+            `SELECT v.id, v.product_id, p.name AS product_name, p.image_url AS product_image_url, v.size_id, s.name AS size_name, v.color_id, c.name AS color_name, v.stock, v.price
              FROM product_variants v
+             JOIN products p ON p.id = v.product_id
              JOIN sizes s ON s.id = v.size_id
              JOIN colors c ON c.id = v.color_id
              WHERE v.id IN (${placeholders})
