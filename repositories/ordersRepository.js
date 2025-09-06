@@ -2,7 +2,7 @@ const { pool } = require("../config/db");
 
 async function findByUser(userId) {
   const [rows] = await pool.query(
-    `SELECT id, user_id, status, total, total_quantity, created_at, updated_at
+    `SELECT id, user_id, status, payment_method, total, total_quantity, created_at, updated_at
      FROM orders
      WHERE user_id = ?
      ORDER BY id DESC`,
@@ -13,7 +13,7 @@ async function findByUser(userId) {
 
 async function findByIdForUser(id, userId) {
   const [rows] = await pool.query(
-    `SELECT id, user_id, status, total, total_quantity, created_at, updated_at
+    `SELECT id, user_id, status, payment_method, total, total_quantity, created_at, updated_at
      FROM orders
      WHERE id = ? AND user_id = ?
      LIMIT 1`,
@@ -40,7 +40,7 @@ async function createFromCart(userId) {
 
     // Get active cart
     const [cartRows] = await connection.query(
-      `SELECT id FROM carts WHERE user_id = ? AND status = 'active' LIMIT 1`,
+      `SELECT id, method FROM carts WHERE user_id = ? AND status = 'active' LIMIT 1`,
       [userId]
     );
     const cart = cartRows && cartRows[0];
@@ -83,9 +83,9 @@ async function createFromCart(userId) {
 
     // Create order
     const [orderResult] = await connection.query(
-      `INSERT INTO orders (user_id, total, total_quantity, status, created_at, updated_at)
-       VALUES (?, ?, ?, 'pending', NOW(), NOW())`,
-      [userId, total, totalQuantity]
+      `INSERT INTO orders (user_id, total, total_quantity, status, payment_method, created_at, updated_at)
+       VALUES (?, ?, ?, 'pending', ?, NOW(), NOW())`,
+      [userId, total, totalQuantity, cart.method || null]
     );
     const orderId = orderResult.insertId;
 
@@ -123,7 +123,7 @@ module.exports = {
   createFromCart,
   async findAllWithUsers() {
     const [rows] = await pool.query(
-      `SELECT o.id, o.user_id, u.name AS user_name, u.email AS user_email, o.total, o.total_quantity, o.status, o.created_at, o.updated_at
+      `SELECT o.id, o.user_id, u.name AS user_name, u.email AS user_email, o.total, o.total_quantity, o.status, o.payment_method, o.created_at, o.updated_at
        FROM orders o
        JOIN users u ON u.id = o.user_id
        ORDER BY o.id DESC`
@@ -132,7 +132,7 @@ module.exports = {
   },
   async findById(id) {
     const [rows] = await pool.query(
-      `SELECT id, user_id, total, total_quantity, status, created_at, updated_at
+      `SELECT id, user_id, total, total_quantity, status, payment_method, created_at, updated_at
        FROM orders
        WHERE id = ?
        LIMIT 1`,

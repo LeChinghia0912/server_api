@@ -2,7 +2,7 @@ const { pool } = require("../config/db");
 
 async function findActiveByUserId(userId) {
   const [rows] = await pool.query(
-    `SELECT id, user_id, status, created_at, updated_at
+    `SELECT id, user_id, status, method, created_at, updated_at
      FROM carts
      WHERE user_id = ? AND status = 'active'
      LIMIT 1`,
@@ -19,7 +19,7 @@ async function createOrGetActiveForUser(userId) {
     [userId]
   );
   const [rows] = await pool.query(
-    `SELECT id, user_id, status, created_at, updated_at
+    `SELECT id, user_id, status, method, created_at, updated_at
      FROM carts
      WHERE user_id = ? AND status = 'active'
      LIMIT 1`,
@@ -34,10 +34,18 @@ async function ensureActiveCart(userId) {
   return createOrGetActiveForUser(userId);
 }
 
+async function updateMethod(cartId, method) {
+  await pool.query(
+    `UPDATE carts SET method = ?, updated_at = NOW() WHERE id = ? LIMIT 1`,
+    [method, cartId]
+  );
+}
+
 module.exports = {
   findActiveByUserId,
   createOrGetActiveForUser,
   ensureActiveCart,
+  updateMethod,
 };
 
 

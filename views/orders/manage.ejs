@@ -71,12 +71,15 @@
       var o = res.data;
       var items = Array.isArray(o.items) ? o.items : [];
       var html = '';
+      var pm = o.payment_method;
+      var pmLabel = (pm == 1) ? 'Thanh toán khi nhận hàng' : ((pm == 2) ? 'Thanh toán online qua ATM' : 'Không xác định');
       html += '<div class="mb-2"><b>Đơn #' + o.id + '</b> - Tổng tiền: ' + (o.total ?? 0) + ' - Tổng SL: ' + (o.total_quantity ?? 0) + '</div>';
       if (o.user) {
         html += '<div class="mb-2"><small class="text-muted">Khách:</small> ' + (o.user.name || ('User #' + o.user.id)) + ' - ' + (o.user.phone || '') + '</div>';
         html += '<div class="mb-2"><small class="text-muted">Địa chỉ:</small> ' +
                 [o.user.address, o.user.ward, o.user.district, o.user.province].filter(Boolean).join(', ') + '</div>';
       }
+      html += '<div class="mb-2">Phương thức thanh toán: <span class="badge text-bg-secondary">' + pmLabel + '</span></div>';
       html += '<div class="mb-2">Trạng thái: <span class="badge text-bg-secondary">' + o.status + '</span></div>';
       html += '<div class="table-responsive"><table class="table table-bordered table-striped align-middle">';
       html += '<thead><tr><th style="width:64px">Ảnh</th><th>Sản phẩm</th><th>Biến thể</th><th>SL</th><th>Giá</th></tr></thead><tbody>';

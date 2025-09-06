@@ -5,34 +5,46 @@ const variantsRepository = require('../repositories/variantsRepository');
 async function getCart(userId) {
   const cart = await cartsRepository.ensureActiveCart(userId);
   const items = await cartRepository.findByCartId(cart.id);
-  return await hydrateCart(items);
+  const hydrated = await hydrateCart(items);
+  return { ...hydrated, method: cart.method || null };
 }
 
 async function addItem(userId, { variant_id, quantity }) {
   const cart = await cartsRepository.ensureActiveCart(userId);
   await cartRepository.upsert(cart.id, variant_id, quantity);
   const items = await cartRepository.findByCartId(cart.id);
-  return await hydrateCart(items);
+  const hydrated = await hydrateCart(items);
+  return { ...hydrated, method: cart.method || null };
 }
 
 async function updateItem(userId, id, { quantity }) {
   const cart = await cartsRepository.ensureActiveCart(userId);
   await cartRepository.updateQuantity(id, cart.id, quantity);
   const items = await cartRepository.findByCartId(cart.id);
-  return await hydrateCart(items);
+  const hydrated = await hydrateCart(items);
+  return { ...hydrated, method: cart.method || null };
 }
 
 async function removeItem(userId, id) {
   const cart = await cartsRepository.ensureActiveCart(userId);
   await cartRepository.remove(id, cart.id);
   const items = await cartRepository.findByCartId(cart.id);
-  return await hydrateCart(items);
+  const hydrated = await hydrateCart(items);
+  return { ...hydrated, method: cart.method || null };
 }
 
 async function clearCart(userId) {
   const cart = await cartsRepository.ensureActiveCart(userId);
   await cartRepository.clear(cart.id);
-  return { items: [], total: 0 };
+  return { items: [], total: 0, method: cart.method || null };
+}
+
+async function setPaymentMethod(userId, method) {
+  const cart = await cartsRepository.ensureActiveCart(userId);
+  await cartsRepository.updateMethod(cart.id, method);
+  const items = await cartRepository.findByCartId(cart.id);
+  const hydrated = await hydrateCart(items);
+  return { ...hydrated, method };
 }
 
 async function hydrateCart(items) {
@@ -60,6 +72,7 @@ module.exports = {
   updateItem,
   removeItem,
   clearCart,
+  setPaymentMethod,
 };
 
 

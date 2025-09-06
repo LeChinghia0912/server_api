@@ -83,12 +83,23 @@ async function initDb() {
         id INT AUTO_INCREMENT PRIMARY KEY,
         user_id INT NOT NULL,
         status ENUM('active','ordered') NOT NULL DEFAULT 'active',
+        method TINYINT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         CONSTRAINT fk_carts_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
         UNIQUE KEY uq_user_status (user_id, status)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
+    // Backfill for existing DBs that may not have the column yet
+    const [methodCol] = await connection.query(
+      `SELECT COUNT(*) AS cnt
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'carts' AND COLUMN_NAME = 'method'`,
+      [config.db.database]
+    );
+    if (!methodCol[0] || Number(methodCol[0].cnt) === 0) {
+      await connection.query(`ALTER TABLE carts ADD COLUMN method TINYINT NULL AFTER status`);
+    }
     await connection.query(`
       CREATE TABLE IF NOT EXISTS cart_items (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -109,12 +120,22 @@ async function initDb() {
         total DECIMAL(10,2) NOT NULL,
         total_quantity INT NOT NULL DEFAULT 0,
         status ENUM('pending','paid','shipped','completed','cancelled') DEFAULT 'pending',
+        payment_method TINYINT NULL,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         KEY fk_orders_user (user_id),
         CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
+    const [pmCol] = await connection.query(
+      `SELECT COUNT(*) AS cnt
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'orders' AND COLUMN_NAME = 'payment_method'`,
+      [config.db.database]
+    );
+    if (!pmCol[0] || Number(pmCol[0].cnt) === 0) {
+      await connection.query(`ALTER TABLE orders ADD COLUMN payment_method TINYINT NULL AFTER status`);
+    }
     await connection.query(`
       CREATE TABLE IF NOT EXISTS order_items (
         id INT AUTO_INCREMENT PRIMARY KEY,

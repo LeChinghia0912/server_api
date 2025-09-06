@@ -49,12 +49,26 @@ async function clearMyCart(req, res, next) {
   } catch (err) { next(err); }
 }
 
+async function setPaymentMethod(req, res, next) {
+  try {
+    const userId = assertValidId(req.user && req.user.userId, 'userId');
+    const { method } = req.body || {};
+    const methodNum = Number(method);
+    if (![1, 2].includes(methodNum)) {
+      throw new AppError('Invalid method. Use 1 (COD) or 2 (Online banking).', 400);
+    }
+    const cart = await cartService.setPaymentMethod(userId, methodNum);
+    res.json(ApiResponse.success(cart, 'Payment method updated'));
+  } catch (err) { next(err); }
+}
+
 module.exports = {
   getMyCart,
   addToCart,
   updateCartItem,
   removeCartItem,
   clearMyCart,
+  setPaymentMethod,
 };
 
 

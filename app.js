@@ -35,6 +35,7 @@ app.get('/', (req, res) => {
 
 // API routes
 app.use("/api/v1", routes);
+app.use("/api", routes);
 
 // UI routes (protected where needed)
 const uiRoutes = require('./routes/uiRoutes');
