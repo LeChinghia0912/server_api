@@ -25,5 +25,7 @@ router.use("/colors", colorsRoutes);
 router.use("/cart", cartRoutes);
 router.use("/admin/orders", ordersAdminRoutes);
 router.use("/orders", ordersRoutes);
+// singular alias for some FE clients
+router.use("/order", ordersRoutes);
 
 module.exports = router;

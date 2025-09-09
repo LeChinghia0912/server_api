@@ -6,6 +6,8 @@ const router = express.Router();
 
 router.get('/', requireAuth, requireAdmin, ctrl.listAll);
 router.get('/:id', requireAuth, requireAdmin, ctrl.getDetail);
+router.put('/:id/pay', requireAuth, requireAdmin, ctrl.markPaid);
+router.put('/:id/status', requireAuth, requireAdmin, ctrl.updateStatus);
 
 module.exports = router;
 

@@ -4,6 +4,7 @@ const userRepository = require("../repositories/userRepository");
 const cache = require("../config/redis");
 const CacheKeys = require("../utils/cacheKeys");
 const CacheTtl = require("../config/cacheTtl");
+const { normalizeStatus, isValidStatus, adminAllowedNext, canUserConfirmCompleted } = require('../utils/orderStatus');
 
 async function listMyOrders(userId) {
   if (cache.isEnabled) {
@@ -57,6 +58,24 @@ module.exports = {
   listMyOrders,
   getMyOrderDetail,
   createOrderFromCart,
+  async markOrderPaidForUser(userId, id) {
+    // ensure the order belongs to user
+    const existing = await ordersRepository.findByIdForUser(id, userId);
+    if (!existing) return null;
+    const updated = await ordersRepository.updateStatusIfCurrent(id, 'pending', 'paid');
+    if (!updated) return existing; // no change (already paid or different status)
+    if (cache.isEnabled) {
+      try {
+        await Promise.all([
+          cache.cacheDel(CacheKeys.orders.userAll(userId)),
+          cache.cacheDel(CacheKeys.orders.userById(userId, id)),
+          cache.cacheDel(CacheKeys.orders.adminAll),
+          cache.cacheDel(CacheKeys.orders.adminById(id)),
+        ]);
+      } catch (_) {}
+    }
+    return getMyOrderDetail(userId, id);
+  },
   async listAllOrdersWithUsers() {
     if (cache.isEnabled) {
       const cached = await cache.cacheGet(CacheKeys.orders.adminAll);
@@ -96,6 +115,76 @@ module.exports = {
     } catch (_) {}
     if (cache.isEnabled) await cache.cacheSet(CacheKeys.orders.adminById(id), order, CacheTtl.orders.adminById);
     return order;
+  },
+  async markOrderPaidAdmin(id) {
+    const existing = await ordersRepository.findById(id);
+    if (!existing) return null;
+    const updated = await ordersRepository.updateStatusIfCurrent(id, 'pending', 'paid');
+    const finalOrder = await ordersRepository.findById(id);
+    if (cache.isEnabled) {
+      try {
+        await Promise.all([
+          cache.cacheDel(CacheKeys.orders.adminAll),
+          cache.cacheDel(CacheKeys.orders.adminById(id)),
+          cache.cacheDel(CacheKeys.orders.userAll(existing.user_id)),
+          cache.cacheDel(CacheKeys.orders.userById(existing.user_id, id)),
+        ]);
+      } catch (_) {}
+    }
+    return finalOrder;
+  },
+  async updateOrderStatusAdmin(id, nextStatus) {
+    const normalized = normalizeStatus(nextStatus);
+    if (!isValidStatus(normalized)) {
+      const err = new Error('Invalid status');
+      err.statusCode = 400;
+      throw err;
+    }
+    const existing = await ordersRepository.findById(id);
+    if (!existing) return null;
+    const current = normalizeStatus(existing.status);
+    const nextAllowed = adminAllowedNext(current);
+    if (!nextAllowed.includes(normalized)) {
+      const err = new Error('Invalid status transition');
+      err.statusCode = 400;
+      throw err;
+    }
+    const updated = await ordersRepository.updateStatusIfCurrent(id, current, normalized);
+    const finalOrder = await ordersRepository.findById(id);
+    if (cache.isEnabled) {
+      try {
+        await Promise.all([
+          cache.cacheDel(CacheKeys.orders.adminAll),
+          cache.cacheDel(CacheKeys.orders.adminById(id)),
+          cache.cacheDel(CacheKeys.orders.userAll(existing.user_id)),
+          cache.cacheDel(CacheKeys.orders.userById(existing.user_id, id)),
+        ]);
+      } catch (_) {}
+    }
+    return finalOrder;
+  },
+  async markOrderCompletedForUser(userId, id) {
+    const existing = await ordersRepository.findByIdForUser(id, userId);
+    if (!existing) return null;
+    const current = normalizeStatus(existing.status);
+    if (!canUserConfirmCompleted(current)) {
+      const err = new Error('Order is not shipped yet');
+      err.statusCode = 400;
+      throw err;
+    }
+    const updated = await ordersRepository.updateStatusIfCurrent(id, 'shipped', 'completed');
+    const finalOrder = await ordersRepository.findByIdForUser(id, userId);
+    if (cache.isEnabled) {
+      try {
+        await Promise.all([
+          cache.cacheDel(CacheKeys.orders.userAll(userId)),
+          cache.cacheDel(CacheKeys.orders.userById(userId, id)),
+          cache.cacheDel(CacheKeys.orders.adminAll),
+          cache.cacheDel(CacheKeys.orders.adminById(id)),
+        ]);
+      } catch (_) {}
+    }
+    return finalOrder;
   },
 };
 

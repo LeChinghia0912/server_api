@@ -24,10 +24,16 @@
           </td>
           <td><%= o.total %></td>
           <td><%= o.total_quantity || 0 %></td>
-          <td><span class="badge text-bg-secondary"><%= o.status %></span></td>
+          <% const __s = String(o.status).toLowerCase(); const __cls = (__s==='pending'?'text-bg-warning':(__s==='paid'?'text-bg-primary':(__s==='shipped'?'text-bg-info':(__s==='completed'?'text-bg-success':(__s==='cancelled'?'text-bg-danger':'text-bg-secondary'))))); %>
+          <td><span class="badge <%= __cls %>"><%= o.status %></span></td>
           <td><%= o.created_at %></td>
           <td>
             <button type="button" class="btn btn-sm btn-outline-primary btn-view" data-id="<%= o.id %>">Xem</button>
+            <% const s = String(o.status).toLowerCase(); %>
+            <% if (s === 'pending') { %>
+              <button type="button" class="btn btn-sm btn-success ms-1 btn-status" data-status="shipped" data-id="<%= o.id %>">Xác nhận</button>
+              <button type="button" class="btn btn-sm btn-outline-danger ms-1 btn-status" data-status="cancelled" data-id="<%= o.id %>">Hủy đơn</button>
+            <% } %>
           </td>
         </tr>
       <% }) %>
@@ -59,43 +65,117 @@
 <script>
   var adminDetailModal = null;
   function ensureAdminDetailModal() { return adminDetailModal || (adminDetailModal = new bootstrap.Modal(document.getElementById('orderAdminDetailModal'))); }
-  document.getElementById('orders-admin-tbody').addEventListener('click', async function(e){
-    var btn = e.target.closest('.btn-view');
-    if (!btn) return;
-    var id = btn.dataset.id;
+  const tbody = document.getElementById('orders-admin-tbody');
+  async function loadOrderDetail(id) {
     var body = document.getElementById('order-admin-detail-body');
     body.innerHTML = '<div class="text-muted">Đang tải...</div>';
-    ensureAdminDetailModal().show();
     try {
       const res = await api.get('/admin/orders/' + id);
-      var o = res.data;
-      var items = Array.isArray(o.items) ? o.items : [];
-      var html = '';
-      var pm = o.payment_method;
-      var pmLabel = (pm == 1) ? 'Thanh toán khi nhận hàng' : ((pm == 2) ? 'Thanh toán online qua ATM' : 'Không xác định');
-      html += '<div class="mb-2"><b>Đơn #' + o.id + '</b> - Tổng tiền: ' + (o.total ?? 0) + ' - Tổng SL: ' + (o.total_quantity ?? 0) + '</div>';
-      if (o.user) {
-        html += '<div class="mb-2"><small class="text-muted">Khách:</small> ' + (o.user.name || ('User #' + o.user.id)) + ' - ' + (o.user.phone || '') + '</div>';
-        html += '<div class="mb-2"><small class="text-muted">Địa chỉ:</small> ' +
-                [o.user.address, o.user.ward, o.user.district, o.user.province].filter(Boolean).join(', ') + '</div>';
-      }
-      html += '<div class="mb-2">Phương thức thanh toán: <span class="badge text-bg-secondary">' + pmLabel + '</span></div>';
-      html += '<div class="mb-2">Trạng thái: <span class="badge text-bg-secondary">' + o.status + '</span></div>';
-      html += '<div class="table-responsive"><table class="table table-bordered table-striped align-middle">';
-      html += '<thead><tr><th style="width:64px">Ảnh</th><th>Sản phẩm</th><th>Biến thể</th><th>SL</th><th>Giá</th></tr></thead><tbody>';
-      items.forEach(function(i){
-        var productStr = i.variant ? (i.variant.product_name || ('SP #' + i.variant.product_id)) : ('Variant #' + i.variant_id);
-        var variantStr = i.variant ? ('Size ' + (i.variant.size_name || i.variant.size_id) + ' - Màu ' + (i.variant.color_name || i.variant.color_id)) : '';
-        var img = i.variant && i.variant.product_image_url ? ('<img src="' + i.variant.product_image_url + '" alt="img" style="height:40px" />') : '';
-        html += '<tr><td>' + img + '</td><td>' + productStr + '</td><td>' + variantStr + '</td><td>' + i.quantity + '</td><td>' + i.price + '</td></tr>';
-      });
-      if (!items.length) { html += '<tr><td colspan="5" class="text-muted">Không có item</td></tr>'; }
-      html += '</tbody></table></div>';
-      body.innerHTML = html;
+      renderOrderDetail(body, res.data);
     } catch (e) {
       body.innerHTML = '<div class="text-danger">Không tải được chi tiết đơn</div>';
     }
+  }
+
+  function statusBadgeClass(s){
+    var st = String(s || '').toLowerCase();
+    if (st === 'pending') return 'text-bg-warning';
+    if (st === 'paid') return 'text-bg-primary';
+    if (st === 'shipped') return 'text-bg-info';
+    if (st === 'completed') return 'text-bg-success';
+    if (st === 'cancelled') return 'text-bg-danger';
+    return 'text-bg-secondary';
+  }
+
+  function renderOrderDetail(body, o) {
+    var items = Array.isArray(o.items) ? o.items : [];
+    var html = '';
+    var pm = o.payment_method;
+    var pmLabel = (pm == 1) ? 'Thanh toán khi nhận hàng' : ((pm == 2) ? 'Thanh toán online qua ATM' : 'Không xác định');
+    html += '<div class="mb-2"><b>Đơn #' + o.id + '</b> - Tổng tiền: ' + (o.total ?? 0) + ' - Tổng SL: ' + (o.total_quantity ?? 0) + '</div>';
+    if (o.user) {
+      html += '<div class="mb-2"><small class="text-muted">Khách:</small> ' + (o.user.name || ('User #' + o.user.id)) + ' - ' + (o.user.phone || '') + '</div>';
+      html += '<div class="mb-2"><small class="text-muted">Địa chỉ:</small> ' +
+              [o.user.address, o.user.ward, o.user.district, o.user.province].filter(Boolean).join(', ') + '</div>';
+    }
+    html += '<div class="mb-2">Phương thức thanh toán: <span class="badge text-bg-secondary">' + pmLabel + '</span></div>';
+    html += '<div class="mb-2">Trạng thái: <span class="badge ' + statusBadgeClass(o.status) + '">' + o.status + '</span></div>';
+    html += '<div class="table-responsive"><table class="table table-bordered table-striped align-middle">';
+    html += '<thead><tr><th style="width:64px">Ảnh</th><th>Sản phẩm</th><th>Biến thể</th><th>SL</th><th>Giá</th></tr></thead><tbody>';
+    items.forEach(function(i){
+      var productStr = i.variant ? (i.variant.product_name || ('SP #' + i.variant.product_id)) : ('Variant #' + i.variant_id);
+      var variantStr = i.variant ? ('Size ' + (i.variant.size_name || i.variant.size_id) + ' - Màu ' + (i.variant.color_name || i.variant.color_id)) : '';
+      var img = i.variant && i.variant.product_image_url ? ('<img src="' + i.variant.product_image_url + '" alt="img" style="height:40px" />') : '';
+      html += '<tr><td>' + img + '</td><td>' + productStr + '</td><td>' + variantStr + '</td><td>' + i.quantity + '</td><td>' + i.price + '</td></tr>';
+    });
+    if (!items.length) { html += '<tr><td colspan="5" class="text-muted">Không có item</td></tr>'; }
+    html += '</tbody></table></div>';
+    // action area
+    var curr = String(o.status).toLowerCase();
+    html += '<div class="mt-3 d-flex">';
+    html += '<button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Đóng</button>';
+    if (curr === 'pending') {
+      html += '<button type="button" class="btn btn-success" data-action="status" data-next="shipped" data-id="' + o.id + '">Xác nhận vận chuyển</button>';
+      html += '<button type="button" class="btn btn-outline-danger ms-2" data-action="status" data-next="cancelled" data-id="' + o.id + '">Hủy đơn</button>';
+    }
+    html += '</div>';
+    body.innerHTML = html;
+    Array.from(body.querySelectorAll('[data-action="status"]')).forEach(function(btn){
+      btn.addEventListener('click', async function(){
+        var oid = this.dataset.id;
+        var next = this.dataset.next;
+        this.disabled = true;
+        try {
+          const upd = await api.put('/admin/orders/' + oid + '/status', { status: next });
+          updateRowAfterStatus(oid, upd.data);
+          loadOrderDetail(oid);
+        } catch (err) {
+          this.disabled = false;
+          body.insertAdjacentHTML('afterbegin', '<div class="alert alert-danger">' + (err && err.message || 'Lỗi cập nhật') + '</div>');
+        }
+      });
+    });
+  }
+  tbody.addEventListener('click', async function(e){
+    var btn = e.target.closest('.btn-view');
+    if (!btn) return;
+    var id = btn.dataset.id;
+    ensureAdminDetailModal().show();
+    loadOrderDetail(id);
   });
+
+  // click on row status button
+  tbody.addEventListener('click', async function(e){
+    var btn = e.target.closest('.btn-status');
+    if (!btn) return;
+    var id = btn.dataset.id;
+    var next = btn.dataset.status;
+    btn.disabled = true;
+    try {
+      const res = await api.put('/admin/orders/' + id + '/status', { status: next });
+      updateRowAfterStatus(id, res.data);
+    } catch (err) {
+      btn.disabled = false;
+      toast && toast.error ? toast.error(err && err.message || 'Cập nhật thất bại') : alert(err && err.message || 'Cập nhật thất bại');
+    }
+  });
+
+  function updateRowAfterStatus(id, order) {
+    var tr = tbody.querySelector('tr td:first-child') && Array.from(tbody.querySelectorAll('tr')).find(function(r){ return String(r.querySelector('td') && r.querySelector('td').textContent).trim() === String(id); });
+    if (!tr) return;
+    // update status badge
+    var statusTd = tr.querySelectorAll('td')[4];
+    if (statusTd) statusTd.innerHTML = '<span class="badge ' + statusBadgeClass(order && order.status) + '">' + (order && order.status || 'paid') + '</span>';
+    // remove mark paid button
+    var actionTd = tr.querySelectorAll('td')[6];
+    if (!actionTd) return;
+    actionTd.querySelectorAll('.btn-status').forEach(function(b){ b.remove(); });
+    var next = String(order && order.status || '').toLowerCase();
+    if (next === 'pending') {
+      actionTd.insertAdjacentHTML('beforeend', ' <button type="button" class="btn btn-sm btn-success ms-1 btn-status" data-status="shipped" data-id="' + id + '">Xác nhận vận chuyển</button>');
+      actionTd.insertAdjacentHTML('beforeend', ' <button type="button" class="btn btn-sm btn-outline-danger ms-1 btn-status" data-status="cancelled" data-id="' + id + '">Hủy đơn</button>');
+    }
+  }
 </script>
 <%- include('../partials/foot') %>
 

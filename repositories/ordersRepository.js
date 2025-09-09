@@ -121,6 +121,24 @@ module.exports = {
   findByIdForUser,
   findItems,
   createFromCart,
+  async findWithUserById(id) {
+    const [rows] = await pool.query(
+      `SELECT o.id, o.user_id, u.name AS user_name, u.email AS user_email, o.total, o.total_quantity, o.status, o.payment_method, o.created_at, o.updated_at
+       FROM orders o
+       JOIN users u ON u.id = o.user_id
+       WHERE o.id = ?
+       LIMIT 1`,
+      [id]
+    );
+    return rows[0] || null;
+  },
+  async updateStatusIfCurrent(id, fromStatus, toStatus) {
+    const [result] = await pool.query(
+      `UPDATE orders SET status = ?, updated_at = NOW() WHERE id = ? AND status = ?`,
+      [toStatus, id, fromStatus]
+    );
+    return result.affectedRows || 0;
+  },
   async findAllWithUsers() {
     const [rows] = await pool.query(
       `SELECT o.id, o.user_id, u.name AS user_name, u.email AS user_email, o.total, o.total_quantity, o.status, o.payment_method, o.created_at, o.updated_at

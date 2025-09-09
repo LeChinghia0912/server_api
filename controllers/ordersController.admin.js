@@ -34,6 +34,30 @@ async function createFromCart(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { listAll, getDetail, createFromCart };
+async function markPaid(req, res, next) {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) return res.status(400).json(ApiResponse.error('Invalid id', 400));
+    const updated = await ordersService.markOrderPaidAdmin(id);
+    if (!updated) return res.status(404).json(ApiResponse.error('Order not found', 404));
+    res.json(ApiResponse.success(updated, 'Order marked as paid'));
+  } catch (err) { next(err); }
+}
+
+async function updateStatus(req, res, next) {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) return res.status(400).json(ApiResponse.error('Invalid id', 400));
+    const status = (req.body && req.body.status) || '';
+    const updated = await ordersService.updateOrderStatusAdmin(id, status);
+    if (!updated) return res.status(404).json(ApiResponse.error('Order not found', 404));
+    res.json(ApiResponse.success(updated, 'Order status updated'));
+  } catch (err) {
+    if (err && err.statusCode) return res.status(err.statusCode).json(ApiResponse.error(err.message, err.statusCode));
+    next(err);
+  }
+}
+
+module.exports = { listAll, getDetail, createFromCart, markPaid, updateStatus };
 
 
