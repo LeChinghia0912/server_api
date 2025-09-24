@@ -22,10 +22,46 @@ async function initDb() {
         email VARCHAR(150) NOT NULL UNIQUE,
         password VARCHAR(255) NOT NULL,
         role ENUM('customer', 'admin') DEFAULT 'customer',
+        phone VARCHAR(20) NULL,
+        date_of_birth DATE NULL,
+        gender ENUM('male','female','other') NULL,
+        province VARCHAR(150) NULL,
+        district VARCHAR(150) NULL,
+        ward VARCHAR(150) NULL,
+        address VARCHAR(255) NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
+    // Backfill missing user profile columns if table already existed
+    const [userCols] = await connection.query(
+      `SELECT COLUMN_NAME
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'users'`,
+      [config.db.database]
+    );
+    const haveCol = (name) => userCols.some(c => String(c.COLUMN_NAME).toLowerCase() === name);
+    if (!haveCol('phone')) {
+      await connection.query(`ALTER TABLE users ADD COLUMN phone VARCHAR(20) NULL AFTER role`);
+    }
+    if (!haveCol('date_of_birth')) {
+      await connection.query(`ALTER TABLE users ADD COLUMN date_of_birth DATE NULL AFTER phone`);
+    }
+    if (!haveCol('gender')) {
+      await connection.query(`ALTER TABLE users ADD COLUMN gender ENUM('male','female','other') NULL AFTER date_of_birth`);
+    }
+    if (!haveCol('province')) {
+      await connection.query(`ALTER TABLE users ADD COLUMN province VARCHAR(150) NULL AFTER gender`);
+    }
+    if (!haveCol('district')) {
+      await connection.query(`ALTER TABLE users ADD COLUMN district VARCHAR(150) NULL AFTER province`);
+    }
+    if (!haveCol('ward')) {
+      await connection.query(`ALTER TABLE users ADD COLUMN ward VARCHAR(150) NULL AFTER district`);
+    }
+    if (!haveCol('address')) {
+      await connection.query(`ALTER TABLE users ADD COLUMN address VARCHAR(255) NULL AFTER ward`);
+    }
     await connection.query(`
       CREATE TABLE IF NOT EXISTS categories (
         id INT AUTO_INCREMENT PRIMARY KEY,
